@@ -1,0 +1,14 @@
+[package]
+name = "moving-package"
+version = "0.1.0"
+authors = ["petarpetrov <ipetrovbg@gmail.com>"]
+edition = "2018"
+include = ["src/**/*", "Cargo.toml", "/moving/"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+sqlite = "0.26.0"
+nanoid = "0.4.0"
+chrono = "0.4"
+cursive = "0.16.3"
