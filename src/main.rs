@@ -104,7 +104,7 @@ fn delete_package(s: &mut Cursive) {
 
     let select_copy = select.on_submit(|s, item| {
         let id: u32 = item.clone();
-        let conn = sqlite::open(dbg!(":moving:")).unwrap();
+        let conn = sqlite::open(dbg!("moving")).unwrap();
         delete_confirmation_modal(conn, s, id);
     });
     let scroll = ScrollView::new(select_copy);
@@ -131,7 +131,7 @@ fn delete_confirmation_modal(conn: Connection, s: &mut Cursive, package_id: u32)
                 match c {
                     0 => {
                         // Save to delete this package
-                        let conn = sqlite::open(dbg!(":moving:")).unwrap();
+                        let conn = sqlite::open(dbg!("moving")).unwrap();
                         conn
                             .iterate(format!("
                                 SELECT * FROM Package WHERE id = {} LIMIT 1
@@ -185,45 +185,66 @@ fn create_package(s: &mut Cursive) {
                 .child("Name:", EditView::new().with_name("name"))
                 .child("Description:", EditView::new().with_name("description"))
         ).button("Create", |cb| {
-        let conn = sqlite::open(dbg!(":moving:")).unwrap();
+        match sqlite::open(dbg!("moving")) {
+            Ok(conn) => {
+                let name = cb.call_on_name("name", |d: &mut EditView| d.get_content()).unwrap().to_string();
+                let description = cb.call_on_name("description", |d: &mut EditView| d.get_content()).unwrap().to_string();
+                let nil = Package::generate_nil();
+                let nil_check_query = format!("SELECT COUNT(*) FROM Package WHERE nil = {}", &nil);
+                conn.iterate(nil_check_query, |pairs_count| {
+                    let c = pairs_count.get(0).unwrap().1.unwrap();
+                    return if c.parse::<u32>().unwrap() == 0 {
+                        cb.pop_layer();
+                        match PackageModule::create(
+                            &conn,
+                            name.clone(),
+                            description.clone(),
+                            nil.clone(),  Utc::now()) {
+                            Ok(_) => {
+                                cb.add_layer(
+                                    Dialog::new()
+                                        .title("Package created successfully!")
+                                        .content(
+                                            display_last_package(&conn)
+                                        )
+                                        .dismiss_button(OK_LABEL)
+                                );
+                            }
+                            Err(e) => {
+                                match e.code {
+                                    Some(code) => cb.add_layer(
+                                        Dialog::info(format!("DB Error code {}", code))
+                                            .dismiss_button(CANCEL_LABEL)
+                                    ),
+                                    None => println!("No error code")
+                                }
+                                match e.message {
+                                    Some(message) => cb.add_layer(
+                                        Dialog::info(format!("DB Error {}", message))
+                                            .dismiss_button(CANCEL_LABEL)
+                                    ),
+                                    None => println!("Unknown error")
+                                }
+                                cb.add_layer(
+                                    Dialog::info("DB Error")
+                                        .dismiss_button(CANCEL_LABEL)
+                                );
+                            }
+                        }
 
-        let name = cb.call_on_name("name", |d: &mut EditView| d.get_content()).unwrap().to_string();
-        let description = cb.call_on_name("description", |d: &mut EditView| d.get_content()).unwrap().to_string();
-        let nil = Package::generate_nil();
-        let nil_check_query = format!("SELECT COUNT(*) FROM Package WHERE nil = {}", &nil);
-        conn.iterate(nil_check_query, |pairs_count| {
-            let c = pairs_count.get(0).unwrap().1.unwrap();
-            return if c.parse::<u32>().unwrap() == 0 {
-                cb.pop_layer();
-                match PackageModule::create(
-                    &conn,
-                    name.clone(),
-                    description.clone(),
-                    nil.clone(),  Utc::now()) {
-                    Ok(_) => {
-                        cb.add_layer(
-                            Dialog::new()
-                                .title("Package created successfully!")
-                                .content(
-                                    display_last_package(&conn)
-                                )
-                                .dismiss_button(OK_LABEL)
-                        );
-                    }
-                    Err(_) => {
-                        cb.add_layer(
-                            Dialog::info("DB Error")
-                                .dismiss_button(CANCEL_LABEL)
-                        );
-                    }
-                }
+                        true
+                    } else {
+                        cb.add_layer(Dialog::info(format!("Package with Nil: \"{}\" already exists.", &nil)));
+                        true
+                    };
+                }).unwrap();
+            }
+            Err(_) => {
+                cb.add_layer(Dialog::info("Error"));
+            }
+        }
 
-                true
-            } else {
-                cb.add_layer(Dialog::info(format!("Package with Nil: \"{}\" already exists.", &nil)));
-                true
-            };
-        }).unwrap();
+
     })
         .dismiss_button(CANCEL_LABEL)
         .full_width();
@@ -264,7 +285,7 @@ fn search_package_by_name(s: &mut Cursive) {
                     .child("Name/Description", EditView::new().with_name("name"))
             )
             .button("Search", |d| {
-            let conn = sqlite::open(dbg!(":moving:")).unwrap();
+            let conn = sqlite::open(dbg!("moving")).unwrap();
 
             let name = d.call_on_name("name", |e: &mut EditView| e.get_content()).unwrap();
 
@@ -310,7 +331,7 @@ fn search_package_by_id(s: &mut Cursive) {
                 ListView::new()
                     .child("ID", EditView::new().with_name("id"))
             ).button("Search", |d| {
-            let conn = sqlite::open(dbg!(":moving:")).unwrap();
+            let conn = sqlite::open(dbg!("moving")).unwrap();
 
             let id = d.call_on_name("id", |e: &mut EditView| e.get_content()).unwrap();
             if id.is_empty() {
@@ -359,7 +380,7 @@ fn search_package_by_nil(s: &mut Cursive) {
                 ListView::new()
                     .child("Nil", EditView::new().with_name("nil"))
             ).button("Search", |d| {
-            let conn = sqlite::open(dbg!(":moving:")).unwrap();
+            let conn = sqlite::open(dbg!("moving")).unwrap();
 
             let nil = d.call_on_name("nil", |e: &mut EditView| e.get_content()).unwrap();
             if nil.is_empty() {
@@ -412,29 +433,37 @@ fn render_packages_in_list(packages: Vec<Package>) -> ListView {
 }
 
 fn list_all_packages(s: &mut Cursive) {
-    // let conn = sqlite::open(dbg!(":moving:")).unwrap();
     let package_mod = PackageModule::new();
     let query = "SELECT * FROM Package";
     let mut packages: Vec<Package> = vec![];
 
-    package_mod.conn.iterate(query, |pairs| {
+    match package_mod.conn.iterate(query, |pairs| {
         PackageModule::collect_packages(pairs, &mut packages);
         true
-    }).unwrap();
-
-    let select = package_mod.render_in_select(&packages);
-    let copy_select = select.on_submit(|s, p_id| {
-        ItemPackage::render_items_for_deletion(p_id.clone(), s);
-    });
-    let scroll = ScrollView::new(copy_select);
-    s.add_layer(
-        Dialog::new()
-            .title("List of All Packages")
-            .content(
-                scroll
-            ).dismiss_button(CLOSE_LABEL)
-            .full_width()
-    );
+    }) {
+        Ok(_) => {
+            let select = package_mod.render_in_select(&packages);
+            let copy_select = select.on_submit(|s, p_id| {
+                ItemPackage::render_items_for_deletion(p_id.clone(), s);
+            });
+            let scroll = ScrollView::new(copy_select);
+            s.add_layer(
+                Dialog::new()
+                    .title("List of All Packages")
+                    .content(
+                        scroll
+                    ).dismiss_button(CLOSE_LABEL)
+                    .full_width()
+            );
+        }
+        Err(e) => {
+            match e.message {
+                Some(message) => println!("{}", message),
+                None => println!("No error message")
+            }
+            println!("Error listing packages");
+        }
+    }
 }
 
 

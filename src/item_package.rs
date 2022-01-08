@@ -14,7 +14,7 @@ pub struct ItemPackage<'a> {
 
 impl ItemPackage<'_> {
     pub fn new(layer: &mut Cursive) -> ItemPackage {
-        let conn = sqlite::open(dbg!(":moving:")).unwrap();
+        let conn = sqlite::open(dbg!("moving")).unwrap();
         let item = ItemPackage {
             conn,
             layer,
@@ -105,7 +105,7 @@ impl ItemPackage<'_> {
     }
 
     fn search_item(name_description: Rc<String>, layer: &mut Cursive) {
-        let conn = sqlite::open(dbg!(":moving:")).unwrap();
+        let conn = sqlite::open(dbg!("moving")).unwrap();
         let query = format!("
             SELECT i.id, i.packageId, i.name, i.description, i.createdAt, p.nil FROM Item as i
             INNER JOIN Package as p ON p.id = i.packageId
@@ -144,7 +144,7 @@ impl ItemPackage<'_> {
     }
 
     pub fn render_items_for_deletion(package_id: u32, layer: &mut Cursive) {
-        let conn = sqlite::open(dbg!(":moving:")).unwrap();
+        let conn = sqlite::open(dbg!("moving")).unwrap();
         let query = format!("
             SELECT * FROM Item WHERE packageId = {}
         ", package_id);
@@ -176,7 +176,7 @@ impl ItemPackage<'_> {
 
     fn confirm_delete_item(layer: &mut Cursive, item: u32) {
         let title = format!("Are you sure you want to delete Item #{}", item);
-        let conn = sqlite::open(dbg!(":moving:")).unwrap();
+        let conn = sqlite::open(dbg!("moving")).unwrap();
         let select_item_query = format!("
             SELECT * FROM Item WHERE id = {} LIMIT 1
         ", item);
@@ -221,7 +221,7 @@ impl ItemPackage<'_> {
     }
 
     pub fn list_items_by_package_id(package_id: u32, layer: &mut Cursive) {
-        let conn = sqlite::open(dbg!(":moving:")).unwrap();
+        let conn = sqlite::open(dbg!("moving")).unwrap();
         let query = format!("
             SELECT * FROM Item WHERE packageId = {}
         ", package_id);
@@ -251,7 +251,7 @@ impl ItemPackage<'_> {
     }
 
     fn create_item(package_id: u32, layer: &mut Cursive) {
-        let conn = sqlite::open(dbg!(":moving:")).unwrap();
+        let conn = sqlite::open(dbg!("moving")).unwrap();
         layer.add_layer(
             Dialog::new()
                 .title(format!("Create item associated to Package #{}", package_id))

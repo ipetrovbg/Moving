@@ -1,0 +1,16 @@
+CREATE TABLE IF NOT EXISTS Package (
+	id INTEGER PRIMARY KEY,
+    name VARCHAR NOT NULL,
+	description TEXT NOT NULL,
+	nil VARCHAR NOT NULL,
+	createdAt DATE NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS Item (
+    id INTEGER PRIMARY KEY,
+    packageId INTEGER NOT NULL,
+    name VARCHAR NOT NULL,
+    description TEXT NOT NULL,
+    createdAt DATE NOT NULL,
+    nil VARCHAR
+);

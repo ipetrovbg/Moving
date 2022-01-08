@@ -10,7 +10,7 @@ pub struct PackageModule {
 impl PackageModule {
 
     pub fn new() -> PackageModule {
-        let conn = sqlite::open(dbg!(":moving:")).unwrap();
+        let conn = sqlite::open(dbg!("moving")).unwrap();
         PackageModule {
             conn,
         }
