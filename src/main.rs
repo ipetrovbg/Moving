@@ -1,5 +1,6 @@
 mod item_package;
 mod package;
+mod printer;
 
 use chrono::prelude::*;
 use cursive::{Cursive, CursiveExt};
@@ -372,6 +373,7 @@ fn search_package_by_id(s: &mut Cursive) {
             .dismiss_button(CLOSE_LABEL)
     );
 }
+
 fn search_package_by_nil(s: &mut Cursive) {
     s.add_layer(
         Dialog::new()

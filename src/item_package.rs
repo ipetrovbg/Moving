@@ -5,6 +5,7 @@ use cursive::views::{Dialog, EditView, ListView, SelectView, ScrollView, TextVie
 use sqlite::{Connection};
 
 use crate::package::PackageModule;
+use crate::printer;
 use std::rc::Rc;
 
 pub struct ItemPackage<'a> {
@@ -147,7 +148,8 @@ impl ItemPackage<'_> {
         let conn = sqlite::open(dbg!("moving")).unwrap();
         let query = format!("
             SELECT * FROM Item WHERE packageId = {}
-        ", package_id);
+        ", package_id.clone());
+        let pkg = package_id.clone();
         let mut items: Vec<Item> = vec![];
         match conn.iterate(query, |pair|{
             Item::collect_items(pair, &mut items, false);
@@ -155,6 +157,7 @@ impl ItemPackage<'_> {
         }) {
             Ok(_) => {
                 let mut select = SelectView::new();
+                let items_count = items.len();
                 for item in items {
                     select.add_item(
                         Item::render_to_string(&item),
@@ -164,7 +167,26 @@ impl ItemPackage<'_> {
                 let copy_select = select.on_submit(|s, item| {
                     ItemPackage::confirm_delete_item(s, item.clone());
                 });
-                layer.add_layer(Dialog::around(ScrollView::new(copy_select)).title("Select an Item")
+                layer.add_layer(Dialog::around(ScrollView::new(copy_select))
+                                .title("Select an Item")
+                                .button("Print", move |c| {
+                                    let package_mod = PackageModule::new();
+                                    match package_mod.get_one(format!("{}", pkg.clone())) {
+                                        Ok(p) => {
+                                            match printer::print_package(p, items_count) {
+                                                Ok(_) => {
+                                                    c.pop_layer();
+                                                }
+                                                Err(_) => {
+                                                    println!("Error");
+                                                }
+                                            };
+                                        }
+                                        Err(_) => {
+                                            println!("Error");
+                                        }
+                                    };
+                                })
                     .dismiss_button("Close")
                 )
             }
